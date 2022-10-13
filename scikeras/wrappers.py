@@ -37,6 +37,13 @@ from scikeras.utils import loss_name, metric_name
 from scikeras.utils.random_state import tensorflow_random_state
 from scikeras.utils.transformers import ClassifierLabelEncoder, RegressorTargetEncoder
 
+#% Comple wth TPu kaggle.
+try:
+    tpu = tf.distribute.cluster_resolver.TPUClusterResolver.connect()
+    tpu_strategy = tf.distribute.experimental.TPUStrategy(tpu)
+except:
+    tpu_strategy = None
+
 
 class BaseWrapper(BaseEstimator):
     """Implementation of the scikit-learn classifier API for Keras.
@@ -918,7 +925,11 @@ class BaseWrapper(BaseEstimator):
             X, y = self._initialize(X, y)
         else:
             X, y = self._validate_data(X, y)
-        self._ensure_compiled_model()
+        if tpu_strategy is not None:
+            with tpu_strategy.scope():
+                self._ensure_compiled_model()
+        else:
+            self._ensure_compiled_model()
 
         if sample_weight is not None:
             X, y, sample_weight = self._validate_sample_weight(X, y, sample_weight)
